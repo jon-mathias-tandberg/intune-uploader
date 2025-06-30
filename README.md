@@ -1,40 +1,186 @@
-# intune-uploader
+# Intune Uploader - OIDC Enhanced Fork
 
-## Description
-This project aims to simplify the process of creating and updating apps and other payloads in Intune by leveraging the power of [AutoPkg](https://github.com/autopkg/autopkg). With AutoPkg, you can automate the process of downloading, packaging, and uploading apps to Intune, saving you time and effort.
+This is a fork of the original [intune-uploader](https://github.com/almenscorner/intune-uploader) with enhanced OIDC (OpenID Connect) support for secure CI/CD pipelines.
 
-Moving forward, additional processors for Intune might be added to this project that uploads more data like Shell scripts to provide a complete automated deployment process. This is why the base class [IntuneUploaderBase](IntuneUploader/IntuneUploaderLib/IntuneUploaderBase.py) was created, to allow for easier creation of additional processors. Contributions are welcome!
+## 🚀 Key Enhancements
 
-Ideas for future processors:
-- Ideas welcome
+### OIDC Authentication Support
+- **Secure CI/CD**: No more client secrets in your pipelines
+- **Federated Credentials**: Use Azure AD federated credentials with GitHub Actions
+- **Automatic Token Management**: Seamless token handling for Microsoft Graph API
 
-For getting started help and documentation, please visit the wiki pages:
-- [Intune App Uploader](https://github.com/almenscorner/intune-uploader/wiki/IntuneAppUploader)
-- [Intune App Icon Getter](https://github.com/almenscorner/intune-uploader/wiki/IntuneAppIconGetter)
-- [Intune App Cleaner](https://github.com/almenscorner/intune-uploader/wiki/IntuneAppCleaner)
-- [Intune Script Uploader](https://github.com/almenscorner/intune-uploader/wiki/IntuneScriptUploader)
-- [Intune App Promoter](https://github.com/almenscorner/intune-uploader/wiki/IntuneAppPromoter)
-- [Intune Teams Notifier](https://github.com/almenscorner/intune-uploader/wiki/IntuneTeamsNotifier)
-- [Intune Slack Notifier](https://github.com/almenscorner/intune-uploader/wiki/IntuneSlackNotifier)
-- [Intune VT App Deleter](https://github.com/almenscorner/intune-uploader/wiki/IntuneVTAppDeleter)
+### Enhanced Processors
+All processors now support both traditional client secret authentication and modern OIDC:
 
-Join the discussions on Slack  <a href="https://macadmins.slack.com/archives/C05EDN7P337">
-    <img height="25" src="https://cdn4.iconfinder.com/data/icons/logos-and-brands/512/306_Slack_logo-256.png"/>
-</a>
+- **IntuneAppUploader** - Upload apps to Intune with OIDC support
+- **IntuneAppCleaner** - Clean up old app versions
+- **IntuneAppPromoter** - Promote apps through deployment rings
+- **IntuneAppIconGetter** - Extract app icons automatically
+- **IntuneScriptUploader** - Upload scripts to Intune
+- **IntuneVTAppDeleter** - VirusTotal integration
+- **IntuneTeamsNotifier** / **IntuneSlackNotifier** - Notifications
 
-### IntuneAppUploader - LOB apps (managed PKG)
-LOB type apps support has been added. It is required that you provide a pkg file that is signed with a valid Apple Developer ID certificate and notarized. This app type can be deploy apps in a "available" manner rather than "required". This means that the user can choose to install the app or not. This is useful for apps that are not required for the user to do their job, but are nice to have.
+## 🔧 Usage
 
-In the override file for a signed and notarized pkg, set the following key to upload as a LOB app:
+### Traditional Client Secret Method
 ```xml
-<key>lob_app</key>
-<true/>
+<key>CLIENT_ID</key>
+<string>your-client-id</string>
+<key>CLIENT_SECRET</key>
+<string>your-client-secret</string>
+<key>TENANT_ID</key>
+<string>your-tenant-id</string>
 ```
 
-## Development
-Pull requests are welcome!
+### Modern OIDC Method
+```xml
+<key>GRAPH_TOKEN</key>
+<string>%GRAPH_TOKEN%</string>
+```
 
-Some ground rules before submitting a PR,
-* Install [pre-commit](https://pre-commit.com)
-   * Once installed, run `pre-commit install` in the forked repo
-* Make sure all tests pass before submitting a PR
+The processor will automatically detect which method to use and handle authentication accordingly.
+
+## 🛠 Installation
+
+### For AutoPkg
+```bash
+# Clone this fork
+git clone https://github.com/jon-mathias-tandberg/intune-uploader.git
+
+# Copy processors to AutoPkg
+sudo mkdir -p /Library/AutoPkg/autopkglib/IntuneUploader
+sudo cp -r intune-uploader/IntuneUploader/* /Library/AutoPkg/autopkglib/IntuneUploader/
+sudo chmod -R 755 /Library/AutoPkg/autopkglib/IntuneUploader/
+```
+
+### Dependencies
+```bash
+pip install -r IntuneUploader/requirements.txt
+```
+
+## 🔐 OIDC Setup
+
+### 1. Azure AD Configuration
+1. Create an App Registration in Azure AD
+2. Configure federated credentials for GitHub Actions
+3. Grant appropriate Microsoft Graph permissions
+
+### 2. GitHub Actions
+```yaml
+- name: Azure Login
+  uses: azure/login@v1
+  with:
+    client-id: ${{ secrets.AZURE_CLIENT_ID }}
+    tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+
+- name: Get Graph Token
+  run: |
+    token=$(az account get-access-token --resource-type ms-graph --query accessToken -o tsv)
+    echo "GRAPH_TOKEN=$token" >> $GITHUB_ENV
+```
+
+### 3. AutoPkg Recipe
+```xml
+<key>GRAPH_TOKEN</key>
+<string>%GRAPH_TOKEN%</string>
+```
+
+## 📋 Example Recipe
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Identifier</key>
+    <string>local.intune.Firefox</string>
+    <key>Input</key>
+    <dict>
+        <key>GRAPH_TOKEN</key>
+        <string>%GRAPH_TOKEN%</string>
+        <key>display_name</key>
+        <string>Firefox</string>
+        <key>description</key>
+        <string>Mozilla Firefox Browser</string>
+        <key>publisher</key>
+        <string>Mozilla</string>
+        <key>bundleId</key>
+        <string>org.mozilla.firefox</string>
+        <key>bundleVersion</key>
+        <string>%version%</string>
+    </dict>
+    <key>Process</key>
+    <array>
+        <dict>
+            <key>Processor</key>
+            <string>IntuneUploader/IntuneAppUploader</string>
+        </dict>
+    </array>
+</dict>
+</plist>
+```
+
+## 🔄 Migration from Original
+
+This fork is fully compatible with the original intune-uploader. To migrate:
+
+1. **Update processor paths** in your recipes:
+   ```xml
+   <!-- Old -->
+   <string>com.github.almenscorner.intune-upload.processors/IntuneAppUploader</string>
+   
+   <!-- New -->
+   <string>IntuneUploader/IntuneAppUploader</string>
+   ```
+
+2. **Add OIDC support** (optional):
+   ```xml
+   <key>GRAPH_TOKEN</key>
+   <string>%GRAPH_TOKEN%</string>
+   ```
+
+3. **Keep existing variables** for backward compatibility:
+   ```xml
+   <key>CLIENT_ID</key>
+   <string>your-client-id</string>
+   <key>CLIENT_SECRET</key>
+   <string>your-client-secret</string>
+   <key>TENANT_ID</key>
+   <string>your-tenant-id</string>
+   ```
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+1. **Token not found**
+   - Ensure `GRAPH_TOKEN` is set in environment
+   - Check Azure AD permissions
+
+2. **Processor not found**
+   - Verify installation path: `/Library/AutoPkg/autopkglib/IntuneUploader/`
+   - Check file permissions
+
+3. **Authentication failed**
+   - Verify federated credentials in Azure AD
+   - Check GitHub Actions permissions
+
+### Debug Mode
+```bash
+autopkg run your-recipe.recipe -v
+```
+
+## 🤝 Contributing
+
+This fork maintains compatibility with the original while adding OIDC support. Contributions are welcome!
+
+## 📄 License
+
+Same license as the original project. See [LICENSE](LICENSE) for details.
+
+## 🔗 Links
+
+- [Original intune-uploader](https://github.com/almenscorner/intune-uploader)
+- [AutoPkg Documentation](https://github.com/autopkg/autopkg)
+- [Microsoft Graph API](https://docs.microsoft.com/en-us/graph/)
+- [Azure AD OIDC](https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-protocols-oidc)

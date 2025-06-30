@@ -36,6 +36,10 @@ class IntuneAppPromoter(IntuneUploaderBase):
             "required": True,
             "description": "The name of the app to assign.",
         },
+        "GRAPH_TOKEN": {
+            "required": False,
+            "description": "The Graph API access token from OIDC authentication.",
+        },
         "blacklist_versions": {
             "required": False,
             "description": "If the app version is in this list, it will not be assigned. Can be a wildcard, for example, 5.*",
@@ -86,10 +90,13 @@ class IntuneAppPromoter(IntuneUploaderBase):
             )
             promotions.append({"version": app_version, "ring": group.get("ring")})
 
-        # Get access token
-        self.token = self.obtain_accesstoken(
-            self.CLIENT_ID, self.CLIENT_SECRET, self.TENANT_ID
-        )
+        # Get access token - use OIDC if available, otherwise fall back to client secret
+        if self.env.get("GRAPH_TOKEN"):
+            self.token = self.obtain_accesstoken_oidc(self.env.get("GRAPH_TOKEN"))
+        else:
+            self.token = self.obtain_accesstoken(
+                self.CLIENT_ID, self.CLIENT_SECRET, self.TENANT_ID
+            )
 
         # Check if promotion info is set
         if not promotion_info:

@@ -41,6 +41,10 @@ class IntuneAppUploader(IntuneUploaderBase):
             "required": True,
             "description": "The tenant ID to use for authenticating the request.",
         },
+        "GRAPH_TOKEN": {
+            "required": False,
+            "description": "The Graph API access token from OIDC authentication.",
+        },
         "app_file": {
             "required": True,
             "description": "The app file to upload to Intune.",
@@ -200,10 +204,13 @@ class IntuneAppUploader(IntuneUploaderBase):
         ignore_current_version = self.env.get("ignore_current_version")
         lob_app = self.env.get("lob_app")
 
-        # Get the access token
-        self.token = self.obtain_accesstoken(
-            self.CLIENT_ID, self.CLIENT_SECRET, self.TENANT_ID
-        )
+        # Get the access token - use OIDC if available, otherwise fall back to client secret
+        if self.env.get("GRAPH_TOKEN"):
+            self.token = self.obtain_accesstoken_oidc(self.env.get("GRAPH_TOKEN"))
+        else:
+            self.token = self.obtain_accesstoken(
+                self.CLIENT_ID, self.CLIENT_SECRET, self.TENANT_ID
+            )
 
         @dataclass
         class App:

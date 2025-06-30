@@ -26,6 +26,10 @@ class IntuneAppCleaner(IntuneUploaderBase):
             "required": True,
             "description": "The name of the app to clean up.",
         },
+        "GRAPH_TOKEN": {
+            "required": False,
+            "description": "The Graph API access token from OIDC authentication.",
+        },
         "keep_version_count": {
             "required": False,
             "description": "The number of versions to keep. Defaults to 3.",
@@ -57,10 +61,13 @@ class IntuneAppCleaner(IntuneUploaderBase):
         apps_to_delete = []
         test_mode = self.env.get("test_mode")
 
-        # Get access token
-        self.token = self.obtain_accesstoken(
-            self.CLIENT_ID, self.CLIENT_SECRET, self.TENANT_ID
-        )
+        # Get access token - use OIDC if available, otherwise fall back to client secret
+        if self.env.get("GRAPH_TOKEN"):
+            self.token = self.obtain_accesstoken_oidc(self.env.get("GRAPH_TOKEN"))
+        else:
+            self.token = self.obtain_accesstoken(
+                self.CLIENT_ID, self.CLIENT_SECRET, self.TENANT_ID
+            )
 
         # When running from the command line, keep_versions is a string, convert to int
         if isinstance(keep_versions, str):

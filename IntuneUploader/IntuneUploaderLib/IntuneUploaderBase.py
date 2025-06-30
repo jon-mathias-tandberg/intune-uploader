@@ -23,6 +23,17 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 class IntuneUploaderBase(Processor):
     """IntuneUploaderBase processor"""
 
+    def obtain_accesstoken_oidc(self, access_token: str) -> dict:
+        """This function uses an existing OIDC access token for Microsoft Graph API.
+
+        Args:
+            access_token (str): The existing access token from OIDC.
+
+        Returns:
+            dict: The token response as a dictionary.
+        """
+        return {"access_token": access_token, "token_type": "Bearer"}
+
     def obtain_accesstoken(
         self, client_id: str, client_secret: str, tenant_id: str
     ) -> dict:
