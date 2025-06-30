@@ -65,6 +65,12 @@ class IntuneAppCleaner(IntuneUploaderBase):
         if self.env.get("GRAPH_TOKEN"):
             self.token = self.obtain_accesstoken_oidc(self.env.get("GRAPH_TOKEN"))
         else:
+            # Check if required variables are available for client secret authentication
+            if not self.CLIENT_ID or not self.CLIENT_SECRET or not self.TENANT_ID:
+                raise ProcessorError(
+                    "Either GRAPH_TOKEN must be provided for OIDC authentication, "
+                    "or CLIENT_ID, CLIENT_SECRET, and TENANT_ID must be provided for client secret authentication."
+                )
             self.token = self.obtain_accesstoken(
                 self.CLIENT_ID, self.CLIENT_SECRET, self.TENANT_ID
             )
