@@ -29,6 +29,10 @@ class IntuneVTAppDeleter(IntuneUploaderBase):
             "required": False,
             "description": "The name of the app to clean up.",
         },
+        "GRAPH_TOKEN": {
+            "required": False,
+            "description": "The Graph API access token from OIDC authentication.",
+        },
         "version": {
             "required": False,
             "description": "The version of the app to remove",
@@ -75,10 +79,19 @@ class IntuneVTAppDeleter(IntuneUploaderBase):
         if isinstance(positives, str):
             positives = int(positives)
 
-        # Get access token
-        self.token = self.obtain_accesstoken(
-            self.CLIENT_ID, self.CLIENT_SECRET, self.TENANT_ID
-        )
+        # Get access token - use OIDC if available, otherwise fall back to client secret
+        if self.env.get("GRAPH_TOKEN"):
+            self.token = self.obtain_accesstoken_oidc(self.env.get("GRAPH_TOKEN"))
+        else:
+            # Check if required variables are available for client secret authentication
+            if not self.CLIENT_ID or not self.CLIENT_SECRET or not self.TENANT_ID:
+                raise ProcessorError(
+                    "Either GRAPH_TOKEN must be provided for OIDC authentication, "
+                    "or CLIENT_ID, CLIENT_SECRET, and TENANT_ID must be provided for client secret authentication."
+                )
+            self.token = self.obtain_accesstoken(
+                self.CLIENT_ID, self.CLIENT_SECRET, self.TENANT_ID
+            )
 
         def _get_app():
             # Get macthing apps
