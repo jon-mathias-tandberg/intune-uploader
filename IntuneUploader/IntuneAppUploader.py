@@ -33,10 +33,7 @@ class IntuneAppUploader(IntuneUploaderBase):
             "required": False,
             "description": "The client ID to use for authenticating the request. Not required when using GRAPH_TOKEN for OIDC authentication.",
         },
-        "CLIENT_SECRET": {
-            "required": False,
-            "description": "The client secret to use for authenticating the request. Not required when using GRAPH_TOKEN for OIDC authentication.",
-        },
+
         "TENANT_ID": {
             "required": False,
             "description": "The tenant ID to use for authenticating the request. Not required when using GRAPH_TOKEN for OIDC authentication.",
